@@ -154,11 +154,15 @@ for (i in seq(1,nrow(activitiesPath)-4,5)){
 
 
 ### Build linear Model
+
+# take two vectors as arguments and returns the distance between them
 predictError <- function(x1,x2){
   tmp <- (x1 - x2) ^ 2
   dist <- sqrt(sum(tmp))
   return(dist)
 }
+
+# Take the table of data and the path as arguments, builds the model using 80% of the data and test with 20%
 predictPath<- function(table, pathStr){
   
   path <- table
@@ -180,31 +184,23 @@ predictPath<- function(table, pathStr){
   }
   path_t <- na.omit(path_t)
   rownames(path_t) <- 1:nrow(path_t)
-  print(path_t)
+  
   # Linear Model
   model<- lm(learning_gain~openness_score + conscientiousness_score, data = path_m)
   p <- predict(model,path_t)
+  print(paste("============================================= PATH" ,pathStr," ================================================"))
+
+  print(path_t)   #print the data used for testing the model
+  print("Prediction:")
+  print(p)
+  print(paste("Error: ", predictError(path_t$learning_gain,p)))
+  
   return (p)
 }
 
-
-
-print("============================================= PATH A ================================================")
 pathA_prediction <- predictPath(table,"A")
-print(pathA_prediction)
-print(summary(pathA_prediction))
-
-print("============================================= PATH B ================================================")
 pathB_prediction <- predictPath(table,"B")
-print(pathB_prediction)
-print(summary(pathB_prediction))
-
-print("============================================= PATH C ================================================")
 pathC_prediction <- predictPath(table,"C")
-print(pathC_prediction)
-print(summary(pathC_prediction))
-
-print("============================================= PATH D ===============================================")
 pathD_prediction <- predictPath(table,"D")
-print(pathB_prediction)
-print(summary(pathD_prediction))
+
+
