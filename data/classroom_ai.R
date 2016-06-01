@@ -1,8 +1,8 @@
 #Load Data
 
-scenario <- read.csv('scenario_17.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
-psycho <- read.csv('psycho_scenario_17.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
-activitiesPath <- read.csv('time_scenario_17.csv', row.names = NULL, header = FALSE,stringsAsFactors = FALSE)
+scenario <- read.csv('scenario_19.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
+psycho <- read.csv('psycho_scenario_19.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
+activitiesPath <- read.csv('time_scenario_19.csv', row.names = NULL, header = FALSE,stringsAsFactors = FALSE)
 
 
 
@@ -51,7 +51,7 @@ processPsycho <- function(file, students){
 }
 
 processPath <- function(file, students){
-  file <- file[order(file$V1),]
+  file <- file[order(file$V1,file$V5),]
   rownames(file) <- 1:nrow(file)
   
   for(i in 1:nrow(file)){
@@ -61,6 +61,7 @@ processPath <- function(file, students){
   }
   file <- na.omit(file)
   rownames(file) <- 1:nrow(file)
+  
   
   return (file)
 }
@@ -99,14 +100,15 @@ table <- data.frame(students,psychological_results,openness_score,conscientiousn
 for(k in seq(1,nrow(psycho),10)){
   l = k+9
   for(j in k:l){
-    if(psycho[j,5] == "Very Inaccurate"){
+    if(psycho[j,6] == "Very Inaccurate"){
       table[ceiling(k/10),2] = paste(table[ceiling(k/10),2],sep = ',',1)
-    }else if(psycho[j,5] == "Inaccurate"){
+    }else if(psycho[j,6] == "Inaccurate"){
       table[ceiling(k/10),2] = paste(table[ceiling(k/10),2],sep = ',',2)
-    }else if(psycho[j,5] == "Neutral"){
+    }else if(psycho[j,6] == "Neutral"){
       table[ceiling(k/10),2] = paste(table[ceiling(k/10),2],sep = ',',3)
+    }else if(psycho[j,6] == "Accurate"){
       table[ceiling(k/10),2] = paste(table[ceiling(k/10),2],sep = ',',4)
-    }else if(psycho[j,5] == "Very accurate"){
+    }else if(psycho[j,6] == "Very accurate"){
       table[ceiling(k/10),2] = paste(table[ceiling(k/10),2],sep = ',',5)
     }
   }
@@ -129,34 +131,34 @@ table[,2] <- substring(table[,2],2,20)
 
 ### get the preTest and posTest scores
 for(i in seq(1,nrow(scenario),2)){
-  table[ceiling(i/2),5] <- scenario[i,5]
-  table[ceiling(i/2),7] <- scenario[i+1,5]
+  table[ceiling(i/2),5] <- scenario[i,6]
+  table[ceiling(i/2),7] <- scenario[i+1,6]
   
 }
+table$learning_gain <- table$post_test_score - table$pre_test_score
 
-for (i in seq(1,nrow(activitiesPath)-5,5)){
-  if(activitiesPath[i+2,2] == 13 && activitiesPath[i+3,2] == 14){
-    table[ceiling(i/4),6] <- "A"
-  }else if (activitiesPath[i+2,2] == 15 && activitiesPath[i+3,2] == 16){
-    table[ceiling(i/4),6] <- "B"
-  }else if (activitiesPath[i+2,2] == 13 && activitiesPath[i+3,2] == 16){
-    table[ceiling(i/4),6] <- "C"
-  }else if (activitiesPath[i+2,2] == 15 && activitiesPath[i+3,2] == 14){
-    table[ceiling(i/4),6] <- "D"
+j <- 0
+for (i in seq(1,nrow(activitiesPath)-4,5)){
+  j <-j+1
+  if(activitiesPath[i+2,3] == 13 && activitiesPath[i+3,3] == 14){
+    table[j,6] <- "A"
+  }else if (activitiesPath[i+2,3] == 15 && activitiesPath[i+3,3] == 16){
+    table[j,6] <- "B"
+  }else if (activitiesPath[i+2,3] == 13 && activitiesPath[i+3,3] == 16){
+    table[j,6] <- "C"
+  }else if (activitiesPath[i+2,3] == 15 && activitiesPath[i+3,3] == 14){
+    table[j,6] <- "D"
   }
   
 }
-learning_gain <- post_test_score - pre_test_score
-
-
-# for now random data 
-a <- read.csv("table.csv", header = T)
-learning_gain <- a[,7] - a[,5]
-a[,8] <- learning_gain
-colnames(a)[8] <- "learning_gain"
 
 
 ### Build linear Model
+predictError <- function(x1,x2){
+  tmp <- (x1 - x2) ^ 2
+  dist <- sqrt(sum(tmp))
+  return(dist)
+}
 predictPath<- function(table, pathStr){
   
   path <- table
@@ -182,12 +184,27 @@ predictPath<- function(table, pathStr){
   # Linear Model
   model<- lm(learning_gain~openness_score + conscientiousness_score, data = path_m)
   p <- predict(model,path_t)
-
   return (p)
 }
 
-# pathA_prediction <- predictPath(a,"A")
-pathB_prediction <- predictPath(a,"B")
+
+
+print("============================================= PATH A ================================================")
+pathA_prediction <- predictPath(table,"A")
+print(pathA_prediction)
+print(summary(pathA_prediction))
+
+print("============================================= PATH B ================================================")
+pathB_prediction <- predictPath(table,"B")
 print(pathB_prediction)
-# pathC_prediction <- predictPath(a,"C")
-# pathD_prediction <- predictPath(a,"D")
+print(summary(pathB_prediction))
+
+print("============================================= PATH C ================================================")
+pathC_prediction <- predictPath(table,"C")
+print(pathC_prediction)
+print(summary(pathC_prediction))
+
+print("============================================= PATH D ===============================================")
+pathD_prediction <- predictPath(table,"D")
+print(pathB_prediction)
+print(summary(pathD_prediction))
