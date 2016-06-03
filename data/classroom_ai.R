@@ -163,12 +163,13 @@ predictError <- function(x1,x2){
 }
 
 # Take the table of data and the path as arguments, builds the model using 80% of the data and test with 20%
-predictPath<- function(table, pathStr){
-  
-  path <- table
-  for(i in 1:nrow(table)){
-    if (!(path[i,6] == pathStr)){
-      path[i,6] <- NA
+
+createData<- function(data, pathStr){
+  path <- data
+  path <- path[,-2]
+  for(i in 1:nrow(path)){
+    if (!(path[i,5] == pathStr)){
+      path[i,5] <- NA
     }
   }
   path <- na.omit(path)
@@ -185,22 +186,102 @@ predictPath<- function(table, pathStr){
   path_t <- na.omit(path_t)
   rownames(path_t) <- 1:nrow(path_t)
   
+  result <- list(path_m, path_t)
+  
+  return(result)
+}
+
+createDataa<- function(data, pathStr){
+  path <- data
+  path <- path[,-2]
+  for(i in 1:nrow(path)){
+    if (!(path[i,5] == pathStr)){
+      path[i,5] <- NA
+    }
+  }
+  path <- na.omit(path)
+  rownames(path) <- 1:nrow(path)
+  
+  return(path)
+  
+}
+predictPath<- function(data,test, pathStr){
   # Linear Model
-  model<- lm(learning_gain~openness_score + conscientiousness_score, data = path_m)
-  p <- predict(model,path_t)
+  model<- lm(learning_gain~openness_score + conscientiousness_score, data = data)
+  p <- predict(model,test)
   print(paste("============================================= PATH" ,pathStr," ================================================"))
 
-  print(path_t)   #print the data used for testing the model
+  print(test)   #print the data used for testing the model
   print("Prediction:")
   print(p)
-  print(paste("Error: ", predictError(path_t$learning_gain,p)))
+  print(paste("Error: ", predictError(test$learning_gain,p)))
   
   return (p)
 }
 
-pathA_prediction <- predictPath(table,"A")
-pathB_prediction <- predictPath(table,"B")
-pathC_prediction <- predictPath(table,"C")
-pathD_prediction <- predictPath(table,"D")
+assignPath <- function(data, student_id, op_score, cons_score, pre_score,post_score){
+  gain <- 0
+  path <- "A"
+  dfA <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
+  colnames(dfA) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
+  path <- "B"
+  dfB <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
+  colnames(dfB) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
+  path <- "C"
+  dfC <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
+  colnames(dfC) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
+  
+  path <- "D"
+  dfD <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
+  colnames(dfD) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
+  
+  dataA <- createDataa(data,"A")
+  pathA_prediction <- predictPath(dataA,dfA,"A")
+ 
+  dataB <- createDataa(data,"B")
+  pathB_prediction <- predictPath(dataB,dfB,"B")
 
+  dataC <- createDataa(data,"C")
+  pathC_prediction <- predictPath(dataC,dfC,"C")
+
+  dataD <- createDataa(data,"D")
+  pathD_prediction <- predictPath(dataD,dfD,"D")
+  
+  maximum <- max(pathA_prediction, pathB_prediction, pathC_prediction, pathD_prediction)
+  
+  if(maximum == pathA_prediction){
+    print(paste("For student",student_id,"you should assign path A, the expected learning_gain is:",maximum))
+  }else if(maximum == pathB_prediction){
+   print(paste("For student", student_id,"you should assign path B, the expected learning_gain is:",maximum))
+  }else if(maximum == pathC_prediction){
+    print(paste("For student",student_id, "you should assign path C, the expected learning_gain is:",maximum))
+  }else{
+    print(paste("You should assign path D, the expected learning_gain is: ",maximum))
+  }
+    
+  
+  
+
+}
+# student1 <- assignPath(table, 35,25,13,0.4,0.7)
+
+dataA <- createData(table,"A")
+dataA_model <-data.frame(dataA[1])
+dataA_test <-data.frame(dataA[2])
+pathA_prediction <- predictPath(dataA_model,dataA_test,"A")
+
+dataB <- createData(table,"B")
+dataB_model <-data.frame(dataB[1])
+dataB_test <-data.frame(dataB[2])
+pathB_prediction <- predictPath(dataB_model,dataB_test,"B")
+
+dataC <- createData(table,"C")
+dataC_model <-data.frame(dataC[1])
+dataC_test <-data.frame(dataC[2])
+pathC_prediction <- predictPath(dataC_model,dataC_test,"C")
+
+dataD <- createData(table,"D")
+dataD_model <-data.frame(dataD[1])
+dataD_test <-data.frame(dataD[2])
+pathD_prediction <- predictPath(dataD_model,dataD_test,"D")
 
