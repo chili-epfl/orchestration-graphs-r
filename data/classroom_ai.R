@@ -1,14 +1,18 @@
+theme <- as.integer(readline("For Epidemics enter 1, For Falling Balls enter 2:  "))
 #Load Data
+if(theme ==1){
+  scenario <- read.csv('scenario_19.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
+  psycho <- read.csv('psycho_scenario_19.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
+  activitiesPath <- read.csv('time_scenario_19.csv', row.names = NULL, header = FALSE,stringsAsFactors = FALSE)
 
-scenario <- read.csv('scenario_19.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
-psycho <- read.csv('psycho_scenario_19.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
-activitiesPath <- read.csv('time_scenario_19.csv', row.names = NULL, header = FALSE,stringsAsFactors = FALSE)
-
-
-
+}else if(theme == 2){
+  scenario <- read.csv('scenario_22.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
+  psycho <- read.csv('psycho_scenario_22.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
+  activitiesPath <- read.csv('time_scenario_22.csv', row.names = NULL, header = FALSE,stringsAsFactors = FALSE)
+}
+ 
 ### function for processing the CSVs into form convenient for the analysis. Order each file by the name of students...
 ### ... to avoid the case when one students ends the experiment after the second one starts it.
-
 
 # process the scenario file, it contains two lines for each students, one for the pretest and one for the postest
 processScenario <- function(file){
@@ -50,6 +54,7 @@ processPsycho <- function(file, students){
   
 }
 
+# process the file about the scenario path
 processPath <- function(file, students){
   file <- file[order(file$V1,file$V5),]
   rownames(file) <- 1:nrow(file)
@@ -83,7 +88,7 @@ students_nb <- length(students)
 psycho <- processPsycho(psycho, students)
 activitiesPath <- processPath(activitiesPath, students)
 
-# create a table that summurizes the data 
+# create a table that summurizes the data
 
 psychological_results <- rep(NA, students_nb)
 openness_score <- rep(0, students_nb)
@@ -120,7 +125,7 @@ for(i in 1:students_nb){
   for(j in seq(2,10,2)){
     table[i,3] = table[i,3]+ strtoi(substring(table[i,2],j,j))
   }
-  
+
   for(k in seq(12,20,2)){
     table[i,4] <- table[i,4] + strtoi(substring(table[i,2],k,k))
   }
@@ -133,26 +138,41 @@ table[,2] <- substring(table[,2],2,20)
 for(i in seq(1,nrow(scenario),2)){
   table[ceiling(i/2),5] <- scenario[i,6]
   table[ceiling(i/2),7] <- scenario[i+1,6]
-  
+
 }
 table$learning_gain <- table$post_test_score - table$pre_test_score
 
-j <- 0
-for (i in seq(1,nrow(activitiesPath)-4,5)){
+### Use the activities' id to find the path followed by each student
+mapPath <- function(theme,file, table){
+j<-0
+if(theme ==1){
+for (i in seq(1,nrow(file)-4,5)){
   j <-j+1
-  if(activitiesPath[i+2,3] == 13 && activitiesPath[i+3,3] == 14){
-    table[j,6] <- "A"
-  }else if (activitiesPath[i+2,3] == 15 && activitiesPath[i+3,3] == 16){
-    table[j,6] <- "B"
-  }else if (activitiesPath[i+2,3] == 13 && activitiesPath[i+3,3] == 16){
-    table[j,6] <- "C"
-  }else if (activitiesPath[i+2,3] == 15 && activitiesPath[i+3,3] == 14){
-    table[j,6] <- "D"
+  if(file[i+2,3] == 13 && file[i+3,3] == 14){
+    table[j,6] <- "video-video"
+  }else if (file[i+2,3] == 15 && file[i+3,3] == 16){
+    table[j,6] <- "text-text"
+  }else if (file[i+2,3] == 13 && file[i+3,3] == 16){
+    table[j,6] <- "video-text"
+  }else if (file[i+2,3] == 15 && file[i+3,3] == 14){
+    table[j,6] <- "text-video"
   }
-  
+}
+}else if(theme == 2){
+  for (i in seq(1,nrow(file)-4,5)){
+    j <-j+1
+    if(file[i+2,3] == 21 && file[i+3,3] == 20){
+      table[j,6] <- "video2-text1"
+    }else if (file[i+2,3] == 22 && file[i+3,3] == 19){
+      table[j,6] <- "video1-text2"
+    }
+    
+  }
+}
+  return(table)
 }
 
-
+table <- mapPath(theme, activitiesPath, table)
 ### Build linear Model
 
 # take two vectors as arguments and returns the distance between them
@@ -162,9 +182,8 @@ predictError <- function(x1,x2){
   return(dist)
 }
 
-# Take the table of data and the path as arguments, builds the model using 80% of the data and test with 20%
-
-createData<- function(data, pathStr){
+### Take the table of data and the path as arguments, builds the model using 80% of the data and test with 20%
+createData1<- function(data, pathStr){
   path <- data
   path <- path[,-2]
   for(i in 1:nrow(path)){
@@ -176,7 +195,7 @@ createData<- function(data, pathStr){
   rownames(path) <- 1:nrow(path)
   path_m<- path[sample(nrow(path), floor(0.8*nrow(path))),]
   rownames(path_m) <- 1:nrow(path_m)
-  
+
   path_t <- path
   for(i in 1:nrow(path_t)){
     if(path_t[i,1] %in% path_m$students){
@@ -185,13 +204,14 @@ createData<- function(data, pathStr){
   }
   path_t <- na.omit(path_t)
   rownames(path_t) <- 1:nrow(path_t)
-  
+
   result <- list(path_m, path_t)
-  
+
   return(result)
 }
 
-createDataa<- function(data, pathStr){
+### Adapt the table to assign path
+createDataToAssign<- function(data, pathStr){
   path <- data
   path <- path[,-2]
   for(i in 1:nrow(path)){
@@ -201,10 +221,12 @@ createDataa<- function(data, pathStr){
   }
   path <- na.omit(path)
   rownames(path) <- 1:nrow(path)
-  
+
   return(path)
-  
+
 }
+
+### Build a linear model
 predictPath<- function(data,test, pathStr){
   # Linear Model
   model<- lm(learning_gain~openness_score + conscientiousness_score, data = data)
@@ -214,74 +236,101 @@ predictPath<- function(data,test, pathStr){
   print(test)   #print the data used for testing the model
   print("Prediction:")
   print(p)
-  print(paste("Error: ", predictError(test$learning_gain,p)))
-  
+  # print(paste("Error: ", predictError(test$learning_gain,p)))
+
   return (p)
 }
 
-assignPath <- function(data, student_id, op_score, cons_score, pre_score,post_score){
+### Assign path to a student in a way that maximizes the learning gain using the linear model 
+assignPath <- function(theme, data, student_id, op_score, cons_score, pre_score,post_score){
   gain <- 0
-  path <- "A"
+
+  if(theme == 1){
+  path <- "video-video"
   dfA <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
   colnames(dfA) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
-  path <- "B"
+  path <- "text-text"
   dfB <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
   colnames(dfB) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
-  path <- "C"
+  path <- "video-text"
   dfC <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
   colnames(dfC) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
-  
-  path <- "D"
+
+  path <- "text-video"
   dfD <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
   colnames(dfD) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
-  
-  dataA <- createDataa(data,"A")
-  pathA_prediction <- predictPath(dataA,dfA,"A")
- 
-  dataB <- createDataa(data,"B")
-  pathB_prediction <- predictPath(dataB,dfB,"B")
 
-  dataC <- createDataa(data,"C")
-  pathC_prediction <- predictPath(dataC,dfC,"C")
+  dataA <- createDataToAssign(data,"video-video")
+  pathA_prediction <- predictPath(dataA,dfA,"video-video")
 
-  dataD <- createDataa(data,"D")
-  pathD_prediction <- predictPath(dataD,dfD,"D")
-  
-  maximum <- max(pathA_prediction, pathB_prediction, pathC_prediction, pathD_prediction)
-  
+  dataB <- createDataToAssign(data,"text-text")
+  pathB_prediction <- predictPath(dataB,dfB,"text-text")
+
+  dataC <- createDataToAssign(data,"video-text")
+  pathC_prediction <- predictPath(dataC,dfC,"video-text")
+
+  dataD <- createDataToAssign(data,"text-video")
+  pathD_prediction <- predictPath(dataD,dfD,"text-video")
+
+  predictions <- c(rbind(pathA_prediction)[1], rbind(pathB_prediction)[1], rbind(pathC_prediction)[1], rbind(pathD_prediction)[1])
+  maximum <- max(predictions)
+
   if(maximum == pathA_prediction){
-    print(paste("For student",student_id,"you should assign path A, the expected learning_gain is:",maximum))
+    print(paste("For student",student_id,"you should assign the video-video path, the expected learning_gain is:",maximum))
   }else if(maximum == pathB_prediction){
-   print(paste("For student", student_id,"you should assign path B, the expected learning_gain is:",maximum))
+   print(paste("For student", student_id,"you should assign the text-text path, the expected learning_gain is:",maximum))
   }else if(maximum == pathC_prediction){
-    print(paste("For student",student_id, "you should assign path C, the expected learning_gain is:",maximum))
+    print(paste("For student",student_id, "you should assign the video-text path, the expected learning_gain is:",maximum))
   }else{
-    print(paste("You should assign path D, the expected learning_gain is: ",maximum))
+    print(paste("You should assign the text-video path, the expected learning_gain is: ",maximum))
   }
+
+  } else if(theme == 2){
+    path <- "video2-text1"
+    dfA <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
+    colnames(dfA) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
+    path <- "video1-text2"
+    dfB <- data.frame(student_id,op_score,cons_score,pre_score,path, post_score,gain)
+    colnames(dfB) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
     
-  
-  
-
+    dataA <- createDataToAssign(data,"video2-text1")
+    pathA_prediction <- predictPath(dataA,dfA,"video2-text1")
+    
+    dataB <- createDataToAssign(data,"video1-text2")
+    pathB_prediction <- predictPath(dataB,dfB,"video1-text2")
+    
+    predictions <- c(rbind(pathA_prediction)[1], rbind(pathB_prediction)[1])
+    maximum <- max(predictions)
+    
+    if(maximum == pathA_prediction){
+      print(paste("For student",student_id,"you should assign the video2-text1 path, the expected learning_gain is:",maximum))
+    }else if(maximum == pathB_prediction){
+      print(paste("For student", student_id,"you should assign the video1-text2 path, the expected learning_gain is:",maximum))
 }
-# student1 <- assignPath(table, 35,25,13,0.4,0.7)
 
-dataA <- createData(table,"A")
-dataA_model <-data.frame(dataA[1])
-dataA_test <-data.frame(dataA[2])
-pathA_prediction <- predictPath(dataA_model,dataA_test,"A")
+  }
+}
+#Example
+student1 <- assignPath(theme,table, 35,25,13,0.4,0.7)
 
-dataB <- createData(table,"B")
-dataB_model <-data.frame(dataB[1])
-dataB_test <-data.frame(dataB[2])
-pathB_prediction <- predictPath(dataB_model,dataB_test,"B")
 
-dataC <- createData(table,"C")
-dataC_model <-data.frame(dataC[1])
-dataC_test <-data.frame(dataC[2])
-pathC_prediction <- predictPath(dataC_model,dataC_test,"C")
-
-dataD <- createData(table,"D")
-dataD_model <-data.frame(dataD[1])
-dataD_test <-data.frame(dataD[2])
-pathD_prediction <- predictPath(dataD_model,dataD_test,"D")
+# dataA <- createData(table,"video-video")
+# dataA_model <-data.frame(dataA[1])
+# dataA_test <-data.frame(dataA[2])
+# pathA_prediction <- predictPath(dataA_model,dataA_test,"video-video")
+#
+# dataB <- createData(table,"text-text")
+# dataB_model <-data.frame(dataB[1])
+# dataB_test <-data.frame(dataB[2])
+# pathB_prediction <- predictPath(dataB_model,dataB_test,"text-text")
+#
+# dataC <- createData(table,"video-text")
+# dataC_model <-data.frame(dataC[1])
+# dataC_test <-data.frame(dataC[2])
+# pathC_prediction <- predictPath(dataC_model,dataC_test,"video-text")
+#
+# dataD <- createData(table,"text-video")
+# dataD_model <-data.frame(dataD[1])
+# dataD_test <-data.frame(dataD[2])
+# pathD_prediction <- predictPath(dataD_model,dataD_test,"text-video")
 
