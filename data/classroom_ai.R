@@ -1,4 +1,9 @@
-theme <- as.integer(readline("For Epidemics enter 1, For Falling Balls enter 2:  "))
+### choose the experiement to analyse
+theme <- 0
+
+while(!(theme == 1 || theme == 2 )){
+  theme <- as.integer(readline("For Epidemics enter 1, For Falling Balls enter 2:  "))
+}
 #Load Data
 if(theme ==1){
   scenario <- read.csv('scenario_19.csv', row.names = NULL, header = FALSE, stringsAsFactors = FALSE)
@@ -183,7 +188,7 @@ predictError <- function(x1,x2){
 }
 
 ### Take the table of data and the path as arguments, builds the model using 80% of the data and test with 20%
-createData1<- function(data, pathStr){
+createData<- function(data, pathStr){
   path <- data
   path <- path[,-2]
   for(i in 1:nrow(path)){
@@ -227,23 +232,27 @@ createDataToAssign<- function(data, pathStr){
 }
 
 ### Build a linear model
-predictPath<- function(data,test, pathStr){
+predictPath<- function(data,test, pathStr,choice){
   # Linear Model
   model<- lm(learning_gain~openness_score + conscientiousness_score, data = data)
   p <- predict(model,test)
   print(paste("============================================= PATH" ,pathStr," ================================================"))
-
-  print(test)   #print the data used for testing the model
+ if(choice == 1){
+   print(test)   #print the data used for testing the model
+ }
   print("Prediction:")
   print(p)
-  # print(paste("Error: ", predictError(test$learning_gain,p)))
-
+  if(choice == 1){
+    print(paste("Error: ", predictError(test$learning_gain,p)))
+}
   return (p)
 }
 
 ### Assign path to a student in a way that maximizes the learning gain using the linear model 
-assignPath <- function(theme, data, student_id, op_score, cons_score, pre_score,post_score){
+assignPath <- function(theme, data, student_id, op_score, cons_score){
   gain <- 0
+  pre_score <- 0
+  post_score <- 0
 
   if(theme == 1){
   path <- "video-video"
@@ -261,20 +270,20 @@ assignPath <- function(theme, data, student_id, op_score, cons_score, pre_score,
   colnames(dfD) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
 
   dataA <- createDataToAssign(data,"video-video")
-  pathA_prediction <- predictPath(dataA,dfA,"video-video")
+  pathA_prediction <- predictPath(dataA,dfA,"video-video",2)
 
   dataB <- createDataToAssign(data,"text-text")
-  pathB_prediction <- predictPath(dataB,dfB,"text-text")
+  pathB_prediction <- predictPath(dataB,dfB,"text-text",2)
 
   dataC <- createDataToAssign(data,"video-text")
-  pathC_prediction <- predictPath(dataC,dfC,"video-text")
+  pathC_prediction <- predictPath(dataC,dfC,"video-text",2)
 
   dataD <- createDataToAssign(data,"text-video")
-  pathD_prediction <- predictPath(dataD,dfD,"text-video")
+  pathD_prediction <- predictPath(dataD,dfD,"text-video",2)
 
   predictions <- c(rbind(pathA_prediction)[1], rbind(pathB_prediction)[1], rbind(pathC_prediction)[1], rbind(pathD_prediction)[1])
+  predictions <- predictions[predictions <=1]
   maximum <- max(predictions)
-
   if(maximum == pathA_prediction){
     print(paste("For student",student_id,"you should assign the video-video path, the expected learning_gain is:",maximum))
   }else if(maximum == pathB_prediction){
@@ -282,7 +291,7 @@ assignPath <- function(theme, data, student_id, op_score, cons_score, pre_score,
   }else if(maximum == pathC_prediction){
     print(paste("For student",student_id, "you should assign the video-text path, the expected learning_gain is:",maximum))
   }else{
-    print(paste("You should assign the text-video path, the expected learning_gain is: ",maximum))
+    print(paste("For student", student_id, "you should assign the text-video path, the expected learning_gain is: ",maximum))
   }
 
   } else if(theme == 2){
@@ -294,10 +303,10 @@ assignPath <- function(theme, data, student_id, op_score, cons_score, pre_score,
     colnames(dfB) <- c("students", "openness_score", "conscientiousness_score", "pre_test_score", "path", "post_test_score", "learning_gain")
     
     dataA <- createDataToAssign(data,"video2-text1")
-    pathA_prediction <- predictPath(dataA,dfA,"video2-text1")
+    pathA_prediction <- predictPath(dataA,dfA,"video2-text1",2)
     
     dataB <- createDataToAssign(data,"video1-text2")
-    pathB_prediction <- predictPath(dataB,dfB,"video1-text2")
+    pathB_prediction <- predictPath(dataB,dfB,"video1-text2",2)
     
     predictions <- c(rbind(pathA_prediction)[1], rbind(pathB_prediction)[1])
     maximum <- max(predictions)
@@ -310,27 +319,58 @@ assignPath <- function(theme, data, student_id, op_score, cons_score, pre_score,
 
   }
 }
-#Example
-student1 <- assignPath(theme,table, 35,25,13,0.4,0.7)
+### "main"
 
+choice <-0
 
-# dataA <- createData(table,"video-video")
-# dataA_model <-data.frame(dataA[1])
-# dataA_test <-data.frame(dataA[2])
-# pathA_prediction <- predictPath(dataA_model,dataA_test,"video-video")
-#
-# dataB <- createData(table,"text-text")
-# dataB_model <-data.frame(dataB[1])
-# dataB_test <-data.frame(dataB[2])
-# pathB_prediction <- predictPath(dataB_model,dataB_test,"text-text")
-#
-# dataC <- createData(table,"video-text")
-# dataC_model <-data.frame(dataC[1])
-# dataC_test <-data.frame(dataC[2])
-# pathC_prediction <- predictPath(dataC_model,dataC_test,"video-text")
-#
-# dataD <- createData(table,"text-video")
-# dataD_model <-data.frame(dataD[1])
-# dataD_test <-data.frame(dataD[2])
-# pathD_prediction <- predictPath(dataD_model,dataD_test,"text-video")
+### if choice is 1, we evaluate predictions. If it is 2 we assign path to new student
+
+while(!(choice == 1 || choice == 2)){
+  choice <- as.integer(readline("For evaluating predictions enter 1. To assign path enter 2: "))
+}
+
+if(choice == 1){
+  if(theme == 1 ){
+    dataA <- createData(table,"video-video")
+    dataA_model <-data.frame(dataA[1])
+    dataA_test <-data.frame(dataA[2])
+    pathA_prediction <- predictPath(dataA_model,dataA_test,"video-video",1)
+    
+    dataB <- createData(table,"text-text")
+    dataB_model <-data.frame(dataB[1])
+    dataB_test <-data.frame(dataB[2])
+    pathB_prediction <- predictPath(dataB_model,dataB_test,"text-text",1)
+    
+    dataC <- createData(table,"video-text")
+    dataC_model <-data.frame(dataC[1])
+    dataC_test <-data.frame(dataC[2])
+    pathC_prediction <- predictPath(dataC_model,dataC_test,"video-text",1)
+    
+    dataD <- createData(table,"text-video")
+    dataD_model <-data.frame(dataD[1])
+    dataD_test <-data.frame(dataD[2])
+    pathD_prediction <- predictPath(dataD_model,dataD_test,"text-video",1)
+    
+  }
+  
+  
+  if(theme == 2){
+    dataA <- createData(table,"video1-text2")
+    dataA_model <-data.frame(dataA[1])
+    dataA_test <-data.frame(dataA[2])
+    pathA_prediction <- predictPath(dataA_model,dataA_test,"video1-text2",1)
+    
+    dataB <- createData(table,"video2-text1")
+    dataB_model <-data.frame(dataB[1])
+    dataB_test <-data.frame(dataB[2])
+    pathB_prediction <- predictPath(dataB_model,dataB_test,"video2-text1",1)
+  }
+}else{
+  student_id <- as.integer(readline("student id: "))
+  op <- as.integer(readline("openness score: "))
+  cons <- as.integer(readline("conscientiousness score:  "))
+  assignPath(theme,table, student_id ,op,cons)
+  
+}
+
 
